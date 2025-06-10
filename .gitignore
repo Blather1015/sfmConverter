@@ -4,8 +4,8 @@
 /node_modules
 /.pnp
 .pnp.js
-.dist/
-.build/
+dist/
+build/
 .vs/
 .vscode/
 .DS_Store
