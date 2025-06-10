@@ -2,6 +2,10 @@
   "name": "excel-to-sfm-converter",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
+  "main": "electron-main.js",
+  "description": "Excel to SFM Converter",
+  "author": "It",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -10,13 +14,16 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "electron": "npm run build && electron .",
+    "dist": "npm run build && electron-builder"
   },
   "eslintConfig": {
     "extends": [
@@ -35,5 +42,20 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.example.exceltoSFM",
+    "productName": "ExcelToSFMConverter",
+    "files": [
+      "build/**/*",
+      "electron-main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   }
 }
