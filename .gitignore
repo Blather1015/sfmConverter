@@ -4,7 +4,12 @@
 /node_modules
 /.pnp
 .pnp.js
+dist/
+build/
 .vs/
+.vscode/
+.DS_Store
+Thumbs.db
 
 # testing
 /coverage
