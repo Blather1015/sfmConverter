@@ -8,8 +8,10 @@ function App() {
     const [jsonData, setJsonData] = useState([]);
     const [columns, setColumns] = useState([]);
 
-    const [lxColumn, setLxColumn] = useState('');
-    const [geColumn, setGeColumn] = useState('');
+    const [numLanguages, setNumLanguages] = useState(1);
+    const [lxColumns, setLxColumns] = useState(['']);
+    const [geColumns, setGeColumns] = useState(['']);
+
     const [psColumn, setPsColumn] = useState('');
     const [deColumn, setDeColumn] = useState('');
     const [pcColumn, setPcColumn] = useState('');
@@ -54,9 +56,29 @@ function App() {
         }
     };
 
+    const handleNumLanguagesChange = (e) => {
+        const value = Math.max(1, parseInt(e.target.value, 10) || 1);
+        setNumLanguages(value);
+        setLxColumns(Array(value).fill(''));
+        setGeColumns(Array(value).fill(''));
+    };
+
     const handleConvert = () => {
         const sfmText = jsonData.map((row) => {
-            return `\\lx ${row[lxColumn] || ''}\n\\ge ${row[geColumn] || ''}\n\\ps ${row[psColumn] || ''}\n\\de ${row[deColumn] || ''}\n\\pc ${row[pcColumn] || ''}\n\\sf ${row[sfColumn] || ''}\n`;
+            let text = '';
+
+            for (let i = 0; i < numLanguages; i++) {
+                text += `\\lx${i + 1} ${row[lxColumns[i]] || ''}\n`;
+                
+            }
+
+            text += `\\ge ${row[geColumns] || ''}\n`;
+            text += `\\ps ${row[psColumn] || ''}\n`;
+            text += `\\de ${row[deColumn] || ''}\n`;
+            text += `\\pc ${row[pcColumn] || ''}\n`;
+            text += `\\sf ${row[sfColumn] || ''}\n`;
+
+            return text;
         }).join('\n');
 
         setSfmContent(sfmText);
@@ -77,10 +99,16 @@ function App() {
         setFileName('');
         setJsonData([]);
         setColumns([]);
-        setLxColumn('');
-        setGeColumn('');
+
+        setNumLanguages(1);
+        setLxColumns(['']);
+        setGeColumns(['']);
+
         setPsColumn('');
         setDeColumn('');
+        setPcColumn('');
+        setSfColumn('');
+
         document.getElementById('fileInput').value = null;
     };
 
@@ -97,28 +125,44 @@ function App() {
 
             {columns.length > 0 && (
                 <div style={{ marginTop: '20px' }}>
-                    <h3>Select columns to map:</h3>
+                    <h3>Select number of languages:</h3>
+                    <input
+                        type="number"
+                        min="1"
+                        value={numLanguages}
+                        onChange={handleNumLanguagesChange}
+                    />
+
+                    {Array.from({ length: numLanguages }).map((_, index) => (
+                        <div key={index} style={{ marginTop: '10px' }}>
+                            <label>Language {index + 1} Word (\lx{index + 1}):</label>
+                            <select
+                                value={lxColumns[index]}
+                                onChange={(e) => {
+                                    const newLx = [...lxColumns];
+                                    newLx[index] = e.target.value;
+                                    setLxColumns(newLx);
+                                }}
+                            >
+                                <option value="">-- Select column --</option>
+                                {columns.map((col) => (
+                                    <option key={col} value={col}>{col}</option>
+                                ))}
+                            </select>
+
+                            
+                        </div>
+                    ))}
 
                     <div>
-                        <label>Word (\lx):</label>
-                        <select value={lxColumn} onChange={(e) => setLxColumn(e.target.value)}>
+                        <label>Gloss(\ge):</label>
+                        <select value={geColumns} onChange={(e) => setGeColumns(e.target.value)}>
                             <option value="">-- Select column --</option>
                             {columns.map((col) => (
                                 <option key={col} value={col}>{col}</option>
                             ))}
                         </select>
                     </div>
-
-                    <div>
-                        <label>Gloss/Translation (\ge):</label>
-                        <select value={geColumn} onChange={(e) => setGeColumn(e.target.value)}>
-                            <option value="">-- Select column --</option>
-                            {columns.map((col) => (
-                                <option key={col} value={col}>{col}</option>
-                            ))}
-                        </select>
-                    </div>
-
                     <div>
                         <label>Part of Speech (\ps):</label>
                         <select value={psColumn} onChange={(e) => setPsColumn(e.target.value)}>
@@ -158,7 +202,6 @@ function App() {
                             ))}
                         </select>
                     </div>
-
 
                     <button onClick={handleConvert} style={{ marginTop: '10px' }}>Convert to SFM</button>
                 </div>
