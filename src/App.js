@@ -5,6 +5,7 @@ import './App.css';
 function App() {
     const [sfmContent, setSfmContent] = useState('');
     const [fileName, setFileName] = useState('');
+    const [fileNameInput, setFileNameInput] = useState('');
     const [jsonData, setJsonData] = useState([]);
     const [columns, setColumns] = useState([]);
 
@@ -85,14 +86,19 @@ function App() {
     };
 
     const handleDownload = () => {
+        const fallbackName = fileName.replace(/\.[^/.]+$/, '') || 'converted';
+        const nameToUse = fileNameInput.trim() || fallbackName;
+
         const blob = new Blob([sfmContent], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement('a');
         link.href = url;
-        link.download = fileName.replace(/\.[^/.]+$/, '') + '.sfm';
+        link.download = nameToUse + '.sfm';
         link.click();
     };
+
+
 
     const handleReset = () => {
         setSfmContent('');
@@ -111,6 +117,8 @@ function App() {
 
         document.getElementById('fileInput').value = null;
     };
+
+
 
     return (
         <div className="App">
@@ -210,6 +218,17 @@ function App() {
             {sfmContent && (
                 <div>
                     <h2>Conversion Success 🎉</h2>
+                    <div style={{ marginTop: '20px' }}>
+                        <label>Custom file name</label>
+                        <input
+                            type="text"
+                            value={fileNameInput}
+                            onChange={(e) => setFileNameInput(e.target.value)}
+                            placeholder={fileName ? fileName.replace(/\.[^/.]+$/, '') : 'converted'}
+                            style={{ marginLeft: '10px' }}
+                        />
+                    </div>
+
                     <button onClick={handleDownload}>Download .sfm file</button>
                     <button onClick={handleReset} style={{ marginLeft: '10px', backgroundColor: '#dc3545' }}>
                         Reset
@@ -217,6 +236,7 @@ function App() {
 
                     <h3>Preview:</h3>
                     <pre className="sfm-preview">{sfmContent}</pre>
+
                 </div>
             )}
         </div>
