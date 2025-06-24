@@ -3,33 +3,25 @@ import * as XLSX from 'xlsx';
 import './App.css';
 
 function App() {
-    /* ------------------------------------------------------------------
-     *  State
-     * ----------------------------------------------------------------*/
     const [sfmContent, setSfmContent] = useState('');
     const [fileName, setFileName] = useState('');
     const [fileNameInput, setFileNameInput] = useState('');
 
-    const [jsonData, setJsonData] = useState([]);   // entire worksheet as JS objects
-    const [columns, setColumns] = useState([]);     // column headers to populate <select>
+    const [jsonData, setJsonData] = useState([]);
+    const [columns, setColumns] = useState([]);
 
-    /* Language‑specific columns
-       - index 0  → \lx  (vernacular / lexeme)
-       - index ≥1 → \ge  (gloss / translation)
-    */
     const [numLanguages, setNumLanguages] = useState(1);
     const [lxColumns, setLxColumns] = useState(['']);
 
-    /* Other single‑value columns */
-    const [psColumn, setPsColumn] = useState(''); // part‑of‑speech      (\ps)
-    const [deColumn, setDeColumn] = useState(''); // definition          (\de)
-    const [pcColumn, setPcColumn] = useState(''); // picture filename    (\pc)
-    const [sfColumn, setSfColumn] = useState(''); // sound filename      (\sf)
-    const [exColumn, setExColumn] = useState(''); // example sentence    (\ex)
+    const [psColumn, setPsColumn] = useState('');
+    const [deColumn, setDeColumn] = useState('');
+    const [pcColumn, setPcColumn] = useState('');
+    const [sfColumn, setSfColumn] = useState('');
+    const [exColumn, setExColumn] = useState('');
 
-    /* ------------------------------------------------------------------
-     *  File import (xlsx, xls, csv)
-     * ----------------------------------------------------------------*/
+    const [lxLabel, setLxLabel] = useState('lx');
+    const [geLabels, setGeLabels] = useState(['ge']);
+
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -37,7 +29,6 @@ function App() {
         setFileName(file.name);
         const reader = new FileReader();
 
-        /* CSV ----------------------------------------------------------------*/
         if (file.name.endsWith('.csv')) {
             reader.onload = (e) => {
                 const csvData = e.target.result;
@@ -52,7 +43,6 @@ function App() {
             return;
         }
 
-        /* Excel (xlsx, xls) ---------------------------------------------------*/
         reader.onload = (e) => {
             const buffer = new Uint8Array(e.target.result);
             const workbook = XLSX.read(buffer, { type: 'array' });
@@ -65,31 +55,23 @@ function App() {
         reader.readAsArrayBuffer(file);
     };
 
-    /* ------------------------------------------------------------------
-     *  UI handlers
-     * ----------------------------------------------------------------*/
     const handleNumLanguagesChange = (e) => {
         const value = Math.max(1, parseInt(e.target.value, 10) || 1);
         setNumLanguages(value);
         setLxColumns(Array(value).fill(''));
+        setGeLabels(Array(value - 1).fill('').map((_, i) => `ge${i + 1}`));
     };
 
-    /* ------------------------------------------------------------------
-     *  SFM conversion
-     * ----------------------------------------------------------------*/
     const handleConvert = () => {
         const sfmText = jsonData.map((row) => {
             let entry = '';
 
-            /* vernacular / lexeme (first language) */
             entry += `\\lx ${row[lxColumns[0]] || ''}\n`;
 
-            /* additional languages become glosses */
             for (let i = 1; i < numLanguages; i++) {
                 entry += `\\ge ${row[lxColumns[i]] || ''}\n`;
             }
 
-            /* single‑column fields */
             if (exColumn) entry += `\\ex ${row[exColumn] || ''}\n`;
             if (psColumn) entry += `\\ps ${row[psColumn] || ''}\n`;
             if (deColumn) entry += `\\de ${row[deColumn] || ''}\n`;
@@ -102,9 +84,6 @@ function App() {
         setSfmContent(sfmText);
     };
 
-    /* ------------------------------------------------------------------
-     *  Download / Reset helpers
-     * ----------------------------------------------------------------*/
     const handleDownload = () => {
         const base = fileName.replace(/\.[^/.]+$/, '') || 'converted';
         const name = (fileNameInput.trim() || base) + '.sfm';
@@ -117,6 +96,31 @@ function App() {
         link.click();
     };
 
+    const handleExportToExcel = () => {
+        const mappedData = jsonData.map((row) => {
+            const newRow = {};
+            Object.entries(row).forEach(([key, val]) => {
+                if (key === 'lx') {
+                    newRow[lxLabel || 'lx'] = val;
+                } else if (key.startsWith('ge')) {
+                    const geIndex = parseInt(key.replace('ge', ''), 10) - 1;
+                    const label = geLabels[geIndex] || key;
+                    newRow[label] = val;
+                } else {
+                    newRow[key] = val;
+                }
+            });
+            return newRow;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(mappedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+        const name = (fileNameInput.trim() || 'from_sfm') + '.xlsx';
+        XLSX.writeFile(workbook, name);
+    };
+
     const handleReset = () => {
         setSfmContent('');
         setFileName('');
@@ -125,6 +129,7 @@ function App() {
 
         setNumLanguages(1);
         setLxColumns(['']);
+        setGeLabels(['ge']);
 
         setPsColumn('');
         setDeColumn('');
@@ -135,14 +140,62 @@ function App() {
         document.getElementById('fileInput').value = null;
     };
 
-    /* ------------------------------------------------------------------
-     *  Render
-     * ----------------------------------------------------------------*/
+    const parseSfm = (sfmText) => {
+        const entries = sfmText.trim().split(/\n(?=\\lx )/);
+        const rows = [];
+
+        entries.forEach(entry => {
+            const row = {};
+            const lines = entry.trim().split('\n');
+
+            lines.forEach(line => {
+                const match = line.match(/^\\(\w+)\s+(.*)$/);
+                if (match) {
+                    const marker = match[1];
+                    const content = match[2];
+
+                    if (marker === 'ge') {
+                        if (!row['ge']) row['ge'] = [];
+                        row['ge'].push(content);
+                    } else {
+                        row[marker] = content;
+                    }
+                }
+            });
+
+            rows.push(row);
+        });
+
+        return rows.map(row => {
+            const flatRow = { ...row };
+            if (Array.isArray(row.ge)) {
+                row.ge.forEach((g, i) => {
+                    flatRow[`ge${i + 1}`] = g;
+                });
+                delete flatRow.ge;
+            }
+            return flatRow;
+        });
+    };
+
+    const handleSfmUpload = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const sfmText = e.target.result;
+            const rows = parseSfm(sfmText);
+            setJsonData(rows);
+            setColumns(rows.length ? Object.keys(rows[0]) : []);
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <div className="App">
-            <h1>Excel / CSV → SFM Converter</h1>
+            <h1>Excel / CSV ↔ SFM Converter</h1>
 
-            {/* ---------------------- File picker ---------------------- */}
             <input
                 id="fileInput"
                 type="file"
@@ -150,10 +203,17 @@ function App() {
                 onChange={handleFileUpload}
             />
 
-            {/* ---------------- Column mapping UI --------------------- */}
+            <div style={{ marginTop: 10 }}>
+                <h3>Upload SFM file (.sfm):</h3>
+                <input
+                    type="file"
+                    accept=".sfm"
+                    onChange={handleSfmUpload}
+                />
+            </div>
+
             {columns.length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                    {/* Number of languages */}
                     <h3>Number of languages:</h3>
                     <input
                         type="number"
@@ -162,14 +222,10 @@ function App() {
                         onChange={handleNumLanguagesChange}
                     />
 
-                    {/* Language column selectors */}
                     {Array.from({ length: numLanguages }).map((_, index) => (
                         <div key={index} style={{ marginTop: 10 }}>
                             <label>
-                                {index === 0
-                                    ? `Language 1 (vernacular) (\\lx)`
-                                    : `Gloss ${index} (\\ge)`}
-                                :
+                                {index === 0 ? `Language 1 (vernacular) (\\lx)` : `Gloss ${index} (\\ge)`}:
                             </label>
                             <select
                                 value={lxColumns[index]}
@@ -187,7 +243,32 @@ function App() {
                         </div>
                     ))}
 
-                    {/* Example sentence */}
+                    <div style={{ marginTop: 10 }}>
+                        <label>Custom label for vernacular (\\lx):</label>
+                        <input
+                            type="text"
+                            value={lxLabel}
+                            onChange={(e) => setLxLabel(e.target.value)}
+                            placeholder="lx"
+                        />
+                    </div>
+
+                    {Array.from({ length: numLanguages - 1 }).map((_, index) => (
+                        <div key={index} style={{ marginTop: 10 }}>
+                            <label>{`Custom label for gloss ${index + 1} (\\ge):`}</label>
+                            <input
+                                type="text"
+                                value={geLabels[index] || ''}
+                                onChange={(e) => {
+                                    const next = [...geLabels];
+                                    next[index] = e.target.value;
+                                    setGeLabels(next);
+                                }}
+                                placeholder={`ge${index + 1}`}
+                            />
+                        </div>
+                    ))}
+
                     <div>
                         <label>Example sentence (\\ex):</label>
                         <select value={exColumn} onChange={(e) => setExColumn(e.target.value)}>
@@ -198,7 +279,6 @@ function App() {
                         </select>
                     </div>
 
-                    {/* Remaining single‑value fields */}
                     <div>
                         <label>Part of speech (\\ps):</label>
                         <select value={psColumn} onChange={(e) => setPsColumn(e.target.value)}>
@@ -242,10 +322,12 @@ function App() {
                     <button onClick={handleConvert} style={{ marginTop: 10 }}>
                         Convert to SFM
                     </button>
+                    <button onClick={handleExportToExcel} style={{ marginLeft: 10 }}>
+                        Export to Excel
+                    </button>
                 </div>
             )}
 
-            {/* --------------------- Result / Download ------------------ */}
             {sfmContent && (
                 <div>
                     <h2>Conversion success 🎉</h2>
