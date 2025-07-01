@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import './App.css';
 
@@ -109,25 +110,28 @@ function App() {
     };
 
 
-    const handleLiftDownload = async () => {
-        const liftXml = generateLiftContent();
-        const liftRangesXml = generateLiftRanges();
 
+    const handleLiftDownload = async () => {
         const base = fileName.replace(/\.[^/.]+$/, '') || 'converted';
-        const name = (fileNameInput.trim() || base);
+        const name = fileNameInput.trim() || base;
+
+        const liftXml = generateLiftContent();  // generates .lift XML content
+        const liftRangesXml = generateLiftRanges();  // your function to generate .lift-ranges
 
         const zip = new JSZip();
         zip.file(`${name}.lift`, liftXml);
         zip.file(`${name}.lift-ranges`, liftRangesXml);
 
-        const content = await zip.generateAsync({ type: "blob" });
-        const url = URL.createObjectURL(content);
+        // Create empty folders
+        zip.folder('pictures');
+        zip.folder('audio');
 
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${name}_lift_package.zip`;
-        link.click();
+        const blob = await zip.generateAsync({ type: 'blob' });
+        saveAs(blob, `${name}_LIFT_Package.zip`);
+
+        setLiftContent(liftXml); // for preview
     };
+
 
 
 
