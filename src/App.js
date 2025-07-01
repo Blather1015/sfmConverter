@@ -182,6 +182,7 @@ function App() {
         const file = event.target.files[0];
         if (!file) return;
 
+        setFileName(file.name); // ← This line is critical
         const reader = new FileReader();
         reader.onload = (e) => {
             const sfmText = e.target.result;
@@ -243,31 +244,35 @@ function App() {
                         </div>
                     ))}
 
-                    <div style={{ marginTop: 10 }}>
-                        <label>Custom label for vernacular (\\lx):</label>
-                        <input
-                            type="text"
-                            value={lxLabel}
-                            onChange={(e) => setLxLabel(e.target.value)}
-                            placeholder="lx"
-                        />
-                    </div>
+                    {fileName.endsWith('.sfm') && (
+                        <>
+                            <div style={{ marginTop: 10 }}>
+                                <label>Custom label for vernacular (\\lx):</label>
+                                <input
+                                    type="text"
+                                    value={lxLabel}
+                                    onChange={(e) => setLxLabel(e.target.value)}
+                                    placeholder="lx"
+                                />
+                            </div>
 
-                    {Array.from({ length: numLanguages - 1 }).map((_, index) => (
-                        <div key={index} style={{ marginTop: 10 }}>
-                            <label>{`Custom label for gloss ${index + 1} (\\ge):`}</label>
-                            <input
-                                type="text"
-                                value={geLabels[index] || ''}
-                                onChange={(e) => {
-                                    const next = [...geLabels];
-                                    next[index] = e.target.value;
-                                    setGeLabels(next);
-                                }}
-                                placeholder={`ge${index + 1}`}
-                            />
-                        </div>
-                    ))}
+                            {Array.from({ length: numLanguages - 1 }).map((_, index) => (
+                                <div key={index} style={{ marginTop: 10 }}>
+                                    <label>{`Custom label for gloss ${index + 1} (\\ge):`}</label>
+                                    <input
+                                        type="text"
+                                        value={geLabels[index] || ''}
+                                        onChange={(e) => {
+                                            const next = [...geLabels];
+                                            next[index] = e.target.value;
+                                            setGeLabels(next);
+                                        }}
+                                        placeholder={`ge${index + 1}`}
+                                    />
+                                </div>
+                            ))}
+                        </>
+                    )}
 
                     <div>
                         <label>Example sentence (\\ex):</label>
