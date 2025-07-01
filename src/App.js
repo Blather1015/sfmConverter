@@ -22,6 +22,7 @@ function App() {
     const [pcColumn, setPcColumn] = useState('');
     const [sfColumn, setSfColumn] = useState('');
     const [exColumn, setExColumn] = useState('');
+    const [prouColumn, setProuColumn] = useState('');
 
     const [lxLabel, setLxLabel] = useState('lx');
     const [geLabels, setGeLabels] = useState(['ge']);
@@ -81,6 +82,7 @@ function App() {
             if (deColumn) entry += `\\de ${row[deColumn] || ''}\n`;
             if (pcColumn) entry += `\\pc ${row[pcColumn] || ''}\n`;
             if (sfColumn) entry += `\\sf ${row[sfColumn] || ''}\n`;
+            if (prouColumn) entry += `\\prou ${row[prouColumn] || ''}\n`;
             return entry;
         }).join('\n');
 
@@ -177,6 +179,7 @@ function App() {
         setPcColumn('');
         setSfColumn('');
         setExColumn('');
+        setProuColumn('');
 
         document.getElementById('fileInput').value = null;
     };
@@ -236,34 +239,56 @@ function App() {
 
 
     const generateLiftContent = () => {
-        const timestamp = new Date().toISOString();
-
         const entriesXml = jsonData.map((row, index) => {
-            const mainForm = row[lxColumns[0]] || 'entry';
-            const entryId = `${mainForm}_${uuidv4()}`;
-            const entryGuid = entryId.split('_')[1];
+            const guid = uuidv4();
+            const entryId = `${row[lxColumns[0]] || 'entry'}_${guid}`;
+            const formText = row[lxColumns[0]] || '';
 
             const lexicalUnit = `
     <lexical-unit>
-        <form lang="th"><text>${mainForm}</text></form>
+        <form lang="th">
+            <text>${formText}</text>
+        </form>
     </lexical-unit>`;
+            const mediaAudio = row[sfColumn];
+            if (!mediaAudio) return '';
 
-            const trait = `    <trait name="morph-type" value="stem" />`;
-
+            const trait = `<trait name="morph-type" value="stem" />`;
+            const Pronunciation = ` 
+            <pronunciation>
+            <form lang="th"><text>${row[prouColumn]}</text>
+            </form>
+            <media href="${mediaAudio}">
+            </media>
+            </pronunciation>`;
             const senses = lxColumns.slice(1).map((col, i) => {
                 const gloss = row[col];
                 if (!gloss) return '';
-                const glossId = uuidv4();
+                const senseId = uuidv4();
+                const mediaImage = row[pcColumn];
+                if (!mediaImage) return '';
+                
+                
                 return `
-    <sense id="${glossId}" order="${i}">
-        <gloss lang="en"><text>${gloss}</text></gloss>
+    <sense id="${senseId}" order="${i}">
+        <gloss lang="en">
+            <text>${gloss}</text>
+        </gloss>
+        <illustration href="${mediaImage}"></illustration>
     </sense>`;
             }).join('');
 
-            return `<entry dateCreated="${timestamp}" dateModified="${timestamp}" id="${entryId}" guid="${entryGuid}">
+            //const mediaImage = row[pcColumn] ? `<illustration href="${row[pcColumn]}"></illustration>` : '';
+            
+
+            return `<entry dateCreated="2025-06-25T23:43:31Z" dateModified="2025-06-25T23:43:31Z"
+      id="${entryId}" guid="${guid}">
 ${lexicalUnit}
 ${trait}
+${Pronunciation}
 ${senses}
+
+
 </entry>`;
         }).join('\n');
 
@@ -272,6 +297,7 @@ ${senses}
 ${entriesXml}
 </lift>`;
     };
+
 
     const generateLiftRanges = () => {
         return `<?xml version="1.0" encoding="UTF-8"?>
@@ -396,6 +422,14 @@ ${entriesXml}
                         </select>
                     </div>
 
+                    <lable>Pronunciation (\\prou)</lable>
+                        <select value={prouColumn} onChange={(e) => setProuColumn(e.target.value)}>
+                            <option value="">-- Select column --</option>
+                        {columns.map((col) => (
+                            <option key={col} value={col}>{col}</option>
+                            )) }
+                        </select>
+
                     <div>
                         <label>Picture filename (\\pc):</label>
                         <select value={pcColumn} onChange={(e) => setPcColumn(e.target.value)}>
@@ -416,15 +450,24 @@ ${entriesXml}
                         </select>
                     </div>
 
-                    <button onClick={handleConvert} style={{ marginTop: 10 }}>
-                        Convert to SFM
-                    </button>
-                    <button onClick={handleExportToExcel} style={{ marginLeft: 10 }}>
-                        Export to Excel
-                    </button>
-                    <button onClick={handleConvertLIFT} style={{ marginLeft: 10 }}>
-                        Convert to LIFT
-                    </button>
+                    {fileType !== 'sfm' && (
+                        <button onClick={handleConvert} style={{ marginTop: 10 }}>
+                            Convert to SFM
+                        </button>
+                    )}
+                    {fileType === 'sfm' && (
+                        <button
+                            onClick={handleExportToExcel}
+                            style={{ marginLeft: 10 }}
+                        >
+                            Export to Excel
+                        </button>
+                    )}
+                    {fileType !== 'sfm' && (
+                        <button onClick={handleConvertLIFT} style={{ marginLeft: 10 }}>
+                            Convert to LIFT
+                        </button>
+                    )}
                 </div>
             )}
 
