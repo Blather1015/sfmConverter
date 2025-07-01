@@ -24,12 +24,15 @@ function App() {
 
     const [lxLabel, setLxLabel] = useState('lx');
     const [geLabels, setGeLabels] = useState(['ge']);
+    const [fileType, setFileType] = useState('');
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
         setFileName(file.name);
+        setFileType('spreadsheet');
+
         const reader = new FileReader();
 
         if (file.name.endsWith('.csv')) {
@@ -157,6 +160,7 @@ function App() {
     const handleReset = () => {
         setSfmContent('');
         setFileName('');
+        setFileType('');
         setJsonData([]);
         setColumns([]);
 
@@ -219,6 +223,7 @@ function App() {
         reader.onload = (e) => {
             const sfmText = e.target.result;
             const rows = parseSfm(sfmText);
+            setFileType('sfm');
             setJsonData(rows);
             setColumns(rows.length ? Object.keys(rows[0]) : []);
         };
@@ -328,17 +333,20 @@ ${entriesXml}
                         </div>
                     ))}
 
-                    <div style={{ marginTop: 10 }}>
-                        <label>Custom label for vernacular (\\lx):</label>
-                        <input
-                            type="text"
-                            value={lxLabel}
-                            onChange={(e) => setLxLabel(e.target.value)}
-                            placeholder="lx"
-                        />
-                    </div>
+                    {/* ✅ Custom label inputs ONLY shown when fileType is 'sfm' */}
+                    {fileType === 'sfm' && (
+                        <div style={{ marginTop: 10 }}>
+                            <label>Custom label for vernacular (\\lx):</label>
+                            <input
+                                type="text"
+                                value={lxLabel}
+                                onChange={(e) => setLxLabel(e.target.value)}
+                                placeholder="lx"
+                            />
+                        </div>
+                    )}
 
-                    {Array.from({ length: numLanguages - 1 }).map((_, index) => (
+                    {fileType === 'sfm' && Array.from({ length: numLanguages - 1 }).map((_, index) => (
                         <div key={index} style={{ marginTop: 10 }}>
                             <label>{`Custom label for gloss ${index + 1} (\\ge):`}</label>
                             <input
