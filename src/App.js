@@ -251,7 +251,7 @@ function App() {
         </form>
     </lexical-unit>`;
             const mediaAudio = row[sfColumn];
-            if (!mediaAudio) return '';
+            
 
             const trait = `<trait name="morph-type" value="stem" />`;
             const Pronunciation = ` 
@@ -265,7 +265,18 @@ function App() {
                 const gloss = row[col];
                 if (!gloss) return '';
                 const senseId = uuidv4();
+                
                 const mediaImage = row[pcColumn];
+                if (i === 0) {
+                    return `
+                    <sense id="${senseId}" order="${i}">
+                         <gloss lang="en">
+                            <text>${gloss}</text>
+                         </gloss>
+                    <illustration href="${mediaImage}"></illustration>
+                     </sense>`;
+                    
+                }
                 if (!mediaImage) return '';
                 
                 
@@ -274,7 +285,6 @@ function App() {
         <gloss lang="en">
             <text>${gloss}</text>
         </gloss>
-        <illustration href="${mediaImage}"></illustration>
     </sense>`;
             }).join('');
 
