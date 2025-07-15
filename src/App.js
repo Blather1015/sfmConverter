@@ -16,6 +16,7 @@ function App() {
 
     const [numLanguages, setNumLanguages] = useState(1);
     const [lxColumns, setLxColumns] = useState(['']);
+    const [prouLangInput, setProuLangInput] = useState('');
 
     const [psColumn, setPsColumn] = useState('');
     const [deColumn, setDeColumn] = useState('');
@@ -71,6 +72,7 @@ function App() {
     };
 
     const handleConvert = () => {
+
         const sfmText = jsonData.map((row) => {
             let entry = '';
             entry += `\\lx ${row[lxColumns[0]] || ''}\n`;
@@ -83,16 +85,32 @@ function App() {
             if (pcColumn) entry += `\\pc ${row[pcColumn] || ''}\n`;
             if (sfColumn) entry += `\\sf ${row[sfColumn] || ''}\n`;
             if (prouColumn) entry += `\\prou ${row[prouColumn] || ''}\n`;
+
+
+            
             return entry;
         }).join('\n');
-
+        setLiftContent('');
         setSfmContent(sfmText);
     };
 
 
     const handleConvertLIFT = () => {
+        const row =[]
+        if (!prouLangInput) {
+            alert("Please insert a language for the 'Header Prou' field.");
+            return;
+        }
+        const sound = row[sfColumn];
+        const fileExtensions = /\.(mp4|mp3|wav|ogg|flac|m4a|aiff|au|wma)$/i;
+        if (sound && fileExtensions.test(sound)) {
+
+        } else if (sound) {
+            alert("Plese insert file extension in the end of the sound's file name. Example .mp4")
+        }
         const liftXml = generateLiftContent(); // Get updated LIFT XML
-        setLiftContent(liftXml);               // Set it for preview
+        setLiftContent(liftXml);               
+        setSfmContent('');
     };
 
 
@@ -118,7 +136,7 @@ function App() {
         const name = fileNameInput.trim() || base;
 
         const liftXml = generateLiftContent();  // generates .lift XML content
-        const liftRangesXml = generateLiftRanges();  // your function to generate .lift-ranges
+        const liftRangesXml = generateLiftRanges();  // function to generate .lift-ranges
 
         const zip = new JSZip();
         zip.file(`${name}.lift`, liftXml);
@@ -165,6 +183,7 @@ function App() {
 
     const handleReset = () => {
         setSfmContent('');
+        setLiftContent('');
         setFileName('');
         setFileType('');
         setJsonData([]);
@@ -225,6 +244,10 @@ function App() {
     const handleSfmUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
+        if (!prouLangInput) {
+            alert("Please insert a language for the 'Header Prou' field.");
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -243,10 +266,12 @@ function App() {
             const guid = uuidv4();
             const entryId = `${row[lxColumns[0]] || 'entry'}_${guid}`;
             const formText = row[lxColumns[0]] || '';
+            
+            
 
             const lexicalUnit = `
     <lexical-unit>
-        <form lang="th">
+        <form lang="${prouLangInput}">
             <text>${formText}</text>
         </form>
     </lexical-unit>`;
@@ -254,9 +279,11 @@ function App() {
             
 
             const trait = `<trait name="morph-type" value="stem" />`;
+            const prou = row[prouColumn];
+            
             const Pronunciation = ` 
             <pronunciation>
-            <form lang="th"><text>${row[prouColumn]}</text>
+            <form lang="${prouLangInput}"><text>${prou}</text>
             </form>
             <media href="${mediaAudio}">
             </media>
@@ -325,6 +352,7 @@ ${entriesXml}
     return (
         <div className="App">
             <h1>Excel / CSV ↔ SFM / LIFT Converter</h1>
+            <h2>By Ravipas Panutatpinyo, Paparn Chongkolrattanapond</h2>
 
             <input
                 id="fileInput"
@@ -352,7 +380,19 @@ ${entriesXml}
                         onChange={handleNumLanguagesChange}
                     />
 
+                    <div>
+                    <label>Language for Header Prou:</label>
+                    <input
+                        type="text"
+                        value={prouLangInput}
+                        onChange={(e) => setProuLangInput(e.target.value)}
+                            placeholder="Example: th"
+                        style={{ marginLeft: 10 }}
+                        />
+                    </div>
+
                     {Array.from({ length: numLanguages }).map((_, index) => (
+
                         <div key={index} style={{ marginTop: 10 }}>
                             <label>
                                 {index === 0 ? `Language 1 (vernacular) (\\lx)` : `Gloss ${index} (\\ge)`}:
@@ -373,7 +413,7 @@ ${entriesXml}
                         </div>
                     ))}
 
-                    {/* ✅ Custom label inputs ONLY shown when fileType is 'sfm' */}
+                    {/* Custom label inputs ONLY shown when fileType is 'sfm' */}
                     {fileType === 'sfm' && (
                         <div style={{ marginTop: 10 }}>
                             <label>Custom label for vernacular (\\lx):</label>
@@ -474,7 +514,7 @@ ${entriesXml}
                         </button>
                     )}
                     {fileType !== 'sfm' && (
-                        <button onClick={handleConvertLIFT} style={{ marginLeft: 10 }}>
+                        <button onClick={handleConvertLIFT} style={{ marginLeft: 10 }}>         
                             Convert to LIFT
                         </button>
                     )}
@@ -491,7 +531,7 @@ ${entriesXml}
                             type="text"
                             value={fileNameInput}
                             onChange={(e) => setFileNameInput(e.target.value)}
-                            placeholder={fileName ? fileName.replace(/\.[^/.]+$/, '') : 'converted'}
+                            placeholder={fileName ? fileName.replace(/\.[^/.]+$/, '') : ''}
                             style={{ marginLeft: 10 }}
                         />
                     </div>
@@ -518,7 +558,7 @@ ${entriesXml}
                             type="text"
                             value={fileNameInput}
                             onChange={(e) => setFileNameInput(e.target.value)}
-                            placeholder={fileName ? fileName.replace(/\.[^/.]+$/, '') : 'converted'}
+                            placeholder={fileName ? fileName.replace(/\.[^/.]+$/, '') : ''}
                             style={{ marginLeft: 10 }}
                         />
                     </div>
